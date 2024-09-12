@@ -2,9 +2,9 @@
 
 ##
 
-set -e;
+#set -e;
 
-set -x;
+#set -x;
 
 ## updating apt
 
