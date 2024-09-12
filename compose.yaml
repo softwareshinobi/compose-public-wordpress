@@ -1,0 +1,155 @@
+services:
+
+##########################################
+##
+## wordpress / networking
+##
+##########################################
+
+    compose-public-wordpress-proxy:
+
+        container_name: compose-public-wordpress-proxy
+
+        image: nginxproxy/nginx-proxy:1.6
+
+        restart: unless-stopped
+
+        ports:
+
+            - 80:80
+
+            - 443:443
+
+        volumes:
+
+            - /var/run/docker.sock:/tmp/docker.sock:ro
+
+            - /var/docker/nginx/html:/usr/share/nginx/html
+
+            - /var/docker/nginx/certs:/etc/nginx/certs
+
+            - /var/docker/nginx/vhost:/etc/nginx/vhost.d
+
+        logging:
+
+            options:
+
+                max-size: "10m"
+
+                max-file: "3"
+
+    compose-public-wordpress-letsencrypt:
+
+        container_name: compose-public-wordpress-letsencrypt
+
+        image: jrcs/letsencrypt-nginx-proxy-companion
+
+        restart: unless-stopped
+
+        volumes_from:
+
+            - compose-public-wordpress-proxy
+
+        volumes:
+
+            - /var/run/docker.sock:/var/run/docker.sock
+
+            - /var/docker/nginx/acme:/etc/acme.sh
+
+        environment:
+
+            DEFAULT_EMAIL: the.software.shinobi@gmail.com
+
+##########################################
+##
+## wordpress / relational data
+##
+##########################################
+
+    compose-public-wordpress-database:
+
+        container_name: compose-public-wordpress-database
+
+        image: mariadb:latest
+
+        restart: unless-stopped
+
+        ports:
+
+            - "127.0.01:3306:3306"
+                    
+        environment:
+
+            MYSQL_ROOT_PASSWORD: aggiepride
+
+            MYSQL_DATABASE: hello_world_wordpress
+
+            MYSQL_USER: hello_world_wordpress
+
+            MYSQL_PASSWORD: hello_world_wordpress
+
+        volumes:
+
+            - /volumes/helloworld.com/database:/var/lib/mysql
+            
+    compose-public-wordpress-phpmyadmin:
+
+        container_name: compose-public-wordpress-phpmyadmin
+
+        image: beeyev/phpmyadmin-lightweight
+
+        depends_on:
+
+           - compose-public-wordpress-database
+
+        links:
+
+           - compose-public-wordpress-database
+
+        ports:
+
+            - "10.28.1.1:33380:80"
+
+            - "127.0.0.1:33380:80"
+
+        environment:
+
+            PMA_HOST: compose-public-wordpress-database
+
+##########################################
+##
+## wordpress / server
+##
+##########################################
+
+
+    compose-public-wordpress-server:
+
+        container_name: compose-public-wordpress-server
+
+        image: wordpress:latest
+
+        restart: unless-stopped
+
+        depends_on:
+
+            - compose-public-wordpress-database
+
+        volumes:
+
+            - /volumes/helloworld.com/:/var/www/html
+
+        environment:
+
+            WORDPRESS_DB_HOST: compose-public-wordpress-database:3306
+
+            WORDPRESS_DB_USER: hello_world_wordpress
+
+            WORDPRESS_DB_PASSWORD: hello_world_wordpress
+
+            WORDPRESS_DB_NAME: hello_world_wordpress
+
+            VIRTUAL_HOST: helloworld.com
+
+            LETSENCRYPT_HOST: helloworld.com
+
